@@ -20,37 +20,50 @@ func multiply (op1: Double, op2: Double) -> Double {
 struct CalculatorBrain {
     
     private var accumulator :Double?
+    private var _description = " "
+    
+    var resultIsPending: Bool {
+        get {
+            return pendingBinaryOperation == nil ? false : true
+        }
+    }
+    
+    var description : (Double?, String) {
+        get {
+            return (accumulator, _description)
+        }
+    }
     
     private enum Operation {
-        case constant (Double)
-        case unaryOperation ((Double) -> Double)
+        case constant (output: Double, description: String)
+        case unaryOperation (output: (Double) -> Double, description: (Double)->String)
         case binaryOperation ((Double, Double) -> Double)
         case equals
-
     }
-    private var operations : Dictionary <String,Operation> =
-        [
-            "π": Operation.constant (Double.pi),
-            "e": Operation.constant (M_E),
-            "√": Operation.unaryOperation (sqrt),
-            "cos": Operation.unaryOperation (cos),
-            "±": Operation.unaryOperation ({-$0}),
+    
+    private var operations : Dictionary <String,Operation> = [
+            "π": Operation.constant (output: Double.pi, description: "\(Double.pi)"),
+            "e": Operation.constant (output: M_E, description: "\(Double.pi)"),
+            "√": Operation.unaryOperation (output: {sqrt($0)}, description: {"√\($0)"}),
+            "cos": Operation.unaryOperation (output: {cos($0)}, description: {"cos(\($0))"}),
+            "±": Operation.unaryOperation (output: {-$0}, description: {"-\($0)"}),
             "×": Operation.binaryOperation ({$0 * $1}),
             "÷": Operation.binaryOperation ({$0 / $1}),
             "+": Operation.binaryOperation ({$0 + $1}),
             "-": Operation.binaryOperation ({$0 - $1}),
             "=": Operation.equals
-
     ]
     
     mutating func performOperation(_ symbol: String) {
         if let operation = operations[symbol]{
             switch operation {
             case .constant(let value):
-                accumulator = value
+                _description = value.description
+                accumulator = value.output
             case .unaryOperation (let function):
                 if accumulator != nil {
-                    accumulator = function (accumulator!)
+                    _description = function.description (accumulator!)
+                    accumulator = function.output (accumulator!)
                 }
             case .binaryOperation (let function):
                 if accumulator != nil {
@@ -59,7 +72,6 @@ struct CalculatorBrain {
                 }
             case .equals:
                 performPendingBinaryOperation()
-                
             }
         }
     }
@@ -87,6 +99,7 @@ struct CalculatorBrain {
     
     var result: Double? {
         get {
+            print("description > \(_description)")
             return accumulator
         }
     }
